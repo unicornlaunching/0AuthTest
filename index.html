@@ -1,30 +1,79 @@
-<!doctype html>
-<html> 
+<!DOCTYPE html>
+<html>
 <head>
-  <title>GitHub Authentication Example</title>
-
-  <!-- Make sure to include Nelify's authentiation library -->
-  <!-- Also available via npm as netlify-auth-providers -->
-  <script src="https://unpkg.com/netlify-auth-providers"></script>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>Sign In with Auth0</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0" />
 </head>
 <body>
-  <h1>GitHub Auth Demo:</h1>
-  <p><a href="#" id="login">Authenticate</a></p>
-  <p id="output"></p>
+
+  <!--[if IE 8]>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/ie8/0.2.5/ie8.js"></script>
+  <![endif]-->
+
+  <!--[if lte IE 9]>
+  <script src="https://cdn.auth0.com/js/base64.js"></script>
+  <script src="https://cdn.auth0.com/js/es5-shim.min.js"></script>
+  <![endif]-->
+
+  <script src="https://cdn.auth0.com/js/lock/11.27/lock.min.js"></script>
   <script>
-    const anchorTag = document.getElementById('login')
-    const outputText = document.getElementById('output')
+    // Decode utf8 characters properly
+    var config = JSON.parse(decodeURIComponent(escape(window.atob('@@config@@'))));
+    config.extraParams = config.extraParams || {};
+    var connection = config.connection;
+    var prompt = config.prompt;
+    var languageDictionary;
+    var language;
 
-    anchorTag.addEventListener('click', (e) => {
-      e.preventDefault()
+    if (config.dict && config.dict.signin && config.dict.signin.title) {
+      languageDictionary = { title: config.dict.signin.title };
+    } else if (typeof config.dict === 'string') {
+      language = config.dict;
+    }
+    var loginHint = config.extraParams.login_hint;
+    var colors = config.colors || {};
 
-      const authenticator = new netlify.default ({})
+    // Available Lock configuration options: https://auth0.com/docs/libraries/lock/v11/configuration
+    var lock = new Auth0Lock(config.clientID, config.auth0Domain, {
+      auth: {
+        redirectUrl: config.callbackURL,
+        responseType: (config.internalOptions || {}).response_type ||
+          (config.callbackOnLocationHash ? 'token' : 'code'),
+        params: config.internalOptions
+      },
+      configurationBaseUrl: config.clientConfigurationBaseUrl,
+      overrides: {
+        __tenant: config.auth0Tenant,
+        __token_issuer: config.authorizationServer.issuer
+      },
+      assetsUrl:  config.assetsUrl,
+      allowedConnections: connection ? [connection] : null,
+      rememberLastLogin: !prompt,
+      language: language,
+      languageDictionary: languageDictionary,
+      theme: {
+        //logo:            'YOUR LOGO HERE',
+        primaryColor:    colors.primary ? colors.primary : 'green'
+      },
+      prefill: loginHint ? { email: loginHint, username: loginHint } : null,
+      closable: false,
+      defaultADUsernameFromEmailPrefix: false
+    });
 
-      authenticator.authenticate({provider:"github", scope: "user"}, (err, data) => {
-        err ? outputText.innerText = "Error Authenticating with GitHub: " + err : 
-        outputText.innerText = "Authenticated with GitHub. Access Token: " + data.token
-      })
-    })
+    if(colors.page_background) {
+      var css = '.auth0-lock.auth0-lock .auth0-lock-overlay { background: ' +
+                  colors.page_background +
+                ' }';
+      var style = document.createElement('style');
+
+      style.appendChild(document.createTextNode(css));
+
+      document.body.appendChild(style);
+    }
+
+    lock.show();
   </script>
 </body>
 </html>
